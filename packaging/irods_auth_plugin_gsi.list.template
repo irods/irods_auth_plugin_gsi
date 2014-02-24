@@ -10,8 +10,8 @@
 %version TEMPLATE_PLUGINVERSION TEMPLATE_PLUGINVERSIONINT
 
 %if DEB
-%requires libc6
-%requires libcurl3
+%requires libglobus-gssapi-gsi4
+%requires libglobus-gss-assist3
 %endif
 
 %if RPM
