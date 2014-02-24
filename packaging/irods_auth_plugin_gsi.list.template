@@ -15,7 +15,8 @@
 %endif
 
 %if RPM
-%requires curl-devel
+%requires globus-gssapi-gsi
+%requires globus-gss-assist
 %endif
 
 %if ARCH
