@@ -4,7 +4,7 @@ SRCS = libgsi.cpp
 
 HEADERS = 
 
-EXTRALIBS = /usr/lib/libirods.a \
+EXTRALIBS = /usr/lib/irods/libirods_client.a \
             -lglobus_gss_assist$(GSI_INSTALL_TYPE2) \
 	    -lglobus_gssapi_gsi$(GSI_INSTALL_TYPE2) \
             -lglobus_gsi_credential$(GSI_INSTALL_TYPE2) \
