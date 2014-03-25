@@ -229,15 +229,6 @@ extern "C" {
         irods::error result = SUCCESS();
         gss_buffer_desc name_buffer;
 
-
-        if(true) {
-            std::stringstream msg;
-            msg << "qqq - Service Name to import: \"";
-            msg << _service_name;
-            msg << "\"";
-            DEBUGMSG(msg.str());
-        }
-
         *_target_name = GSS_C_NO_NAME;
         if ( _service_name != NULL && strlen( _service_name ) > 0 ) {
             size_t size = strlen( _service_name ) + 1;
@@ -534,17 +525,6 @@ extern "C" {
         irods::error result = SUCCESS();
         irods::error ret;
 
-
-        if(true) {
-            std::stringstream msg;
-            msg << "qqq - Response username: \"";
-            msg << _resp->username;
-            msg << "\"\tresponse: \"";
-            msg << _resp->response;
-            msg << "\"";
-            DEBUGMSG(msg.str());
-        }
-
         ret = _ctx.valid<irods::gsi_auth_object>();
         if ( ( result = ASSERT_PASS( ret, "Invalid plugin context." ) ).ok() ) {
             if ( ( result = ASSERT_ERROR( _req != NULL && _resp != NULL, SYS_INVALID_INPUT_PARAM, "Request or response pointer is null." ) ).ok() ) {
@@ -667,13 +647,6 @@ extern "C" {
         const char* _context ) {
         irods::error result = SUCCESS();
         irods::error ret;
-
-
-        if(true) {
-            std::stringstream msg;
-            msg << "qqq - Here";
-            DEBUGMSG(msg.str());
-        }
 
         ret = _ctx.valid<irods::gsi_auth_object>();
         if ( ( result = ASSERT_PASS( ret, "Invalid plugin context" ) ).ok() ) {
@@ -1144,13 +1117,6 @@ extern "C" {
         irods::error result = SUCCESS();
         irods::error ret;
 
-
-        if(true) {
-            std::stringstream msg;
-            msg << "qqq - Here";
-            DEBUGMSG(msg.str());
-        }
-
         // validate incoming parameters
         ret = _ctx.valid< irods::gsi_auth_object >();
         if ( ( result = ASSERT_PASS( ret, "Invalid plugin context." ) ).ok() ) {
@@ -1244,13 +1210,6 @@ extern "C" {
         rcComm_t* _comm ) {
         irods::error result = SUCCESS();
         irods::error ret;
-
-
-        if(true) {
-            std::stringstream msg;
-            msg << "qqq - Here";
-            DEBUGMSG(msg.str());
-        }
 
         // validate incoming parameters
         ret = _ctx.valid<irods::gsi_auth_object>();
