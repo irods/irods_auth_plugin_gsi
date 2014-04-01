@@ -15,6 +15,9 @@ class Test_Gsi_Suite(unittest.TestCase, ResourceBase):
     
     my_test_resource = {"setup":[], "teardown":[]}
 
+    # Placeholder for the previous auth scheme state
+    prev_auth_scheme = "native"
+
     def setUp(self):
         ResourceBase.__init__(self)
         s.twousers_up()
@@ -40,8 +43,20 @@ class Test_Gsi_Suite(unittest.TestCase, ResourceBase):
         # Set the DN for the user
         assertiCmd(s.adminsession, "iadmin aua rods '/O=Grid/OU=GlobusTest/OU=simpleCA-pluto/OU=local/CN=irods'")
         
+        # Set the appropriate environment variables
+        try:
+            self.prev_auth_scheme = os.environ['irodsAuthScheme']
+        except KeyError:
+            pass
+
         # Set the irodsAuthScheme to turn on GSI
         os.environ['irodsAuthScheme'] = "gsi"
+
+    # Restore the state of the system
+    def gsi_teardown(self):
+
+        # Restore the previous auth scheme
+        os.environ['irodsAuthScheme'] = self.prev_auth_scheme
 
     # Try to authenticate before getting a certificate. Make sure this fails.
     def test_authentication_gsi_without_cert(self):
@@ -53,6 +68,8 @@ class Test_Gsi_Suite(unittest.TestCase, ResourceBase):
 
         # Try an ils and make sure it fails
         assertiCmdFail(s.adminsession, "ils", "LIST", "home")
+
+        self.gsi_teardown()
 
     # Try to authenticate after getting a TGT. This should pass
     def test_authentication_gsi_with_cert(self):
@@ -66,3 +83,4 @@ class Test_Gsi_Suite(unittest.TestCase, ResourceBase):
         # Try an ils
         assertiCmd(s.adminsession, "ils", "LIST", "home")
 
+        self.gsi_teardown()
