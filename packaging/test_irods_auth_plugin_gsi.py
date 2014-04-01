@@ -30,14 +30,14 @@ class Test_Gsi_Suite(unittest.TestCase, ResourceBase):
     # Configure iRODS to enable gsi support. Note it will not be turned on until the appropriate environment variable is set
     def gsi_setup(self):
 
-        globusDirTar = "~/secrets/gsi/globus.tar.gz"
+        globusDirSrc = "~/secrets/gsi/.globus"
         irodsHome = "~/"
         globusDirDest = irodsHome + "/.globus"
         privateKey = globusDirDest + "/userkey.pem"
 
         # Untar the .globus directory to the irods home dir
         if not os.path.exists(globusDirDest):
-            os.system("cd %s && tar xf %s" % (irodsHome, globusDirTar))
+            os.system("cp %s %s" % (globusDirSrc, globusDirDest))
             os.system("chmod 600 %s" % privateKey)
 
         # Set the DN for the user
