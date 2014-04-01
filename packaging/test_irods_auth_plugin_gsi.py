@@ -37,7 +37,7 @@ class Test_Gsi_Suite(unittest.TestCase, ResourceBase):
 
         # Untar the .globus directory to the irods home dir
         if not os.path.exists(globusDirDest):
-            os.system("cp %s %s" % (globusDirSrc, globusDirDest))
+            os.system("cp -r %s %s" % (globusDirSrc, globusDirDest))
             os.system("chmod 600 %s" % privateKey)
 
         # Set the DN for the user
