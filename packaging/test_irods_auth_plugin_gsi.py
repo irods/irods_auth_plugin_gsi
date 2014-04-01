@@ -41,7 +41,7 @@ class Test_Gsi_Suite(unittest.TestCase, ResourceBase):
             os.system("chmod 600 %s" % privateKey)
 
         # Set the DN for the user
-        assertiCmd(s.adminsession, "iadmin aua rods '/O=Grid/OU=GlobusTest/OU=simpleCA-pluto/OU=local/CN=irods'")
+        os.system("iadmin aua rods '/O=Grid/OU=GlobusTest/OU=simpleCA-pluto/OU=local/CN=irods'")
         
         # Set the appropriate environment variables
         try:
@@ -67,7 +67,7 @@ class Test_Gsi_Suite(unittest.TestCase, ResourceBase):
         os.system("grid-proxy-destroy")
 
         # Try an ils and make sure it fails
-        assertiCmdFail(s.adminsession, "ils", "LIST", "home")
+        assertiCmd(s.adminsession, "ils", "ERROR", "GSI_ERROR_ACQUIRING_CREDS")
 
         self.gsi_teardown()
 
@@ -77,8 +77,8 @@ class Test_Gsi_Suite(unittest.TestCase, ResourceBase):
 
         self.gsi_setup()
 
-        # Make sure we have a valid TGT
-        os.system("echo %s | grid-proxy-init -pwstdin" % gsiPassword)
+        # Make sure we have a valid proxy cert
+        os.system("echo %s | grid-proxy-init -pwstdin"" % gsiPassword)
 
         # Try an ils
         assertiCmd(s.adminsession, "ils", "LIST", "home")
