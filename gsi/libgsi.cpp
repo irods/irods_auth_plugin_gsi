@@ -123,7 +123,8 @@ extern "C" {
         unsigned int msg_ctx;
         int status;
         std::string whichSide;
-
+        static const unsigned int max_str_length = 1024;
+        
         if ( is_client ) {
             whichSide = "Client side:";
         }
@@ -135,9 +136,10 @@ extern "C" {
         status = GSI_ERROR_FROM_GSI_LIBRARY;
         do {
             gss_display_status( &minorStatus, code, type, GSS_C_NULL_OID, &msg_ctx, &msg );
-            rodsLogAndErrorMsg( LOG_ERROR, _r_error, status,
-                                "%sGSS-API error %s: %s", whichSide.c_str(), callerMsg,
-                                msg.value );
+            std::stringstream log_message;
+            log_message << whichSide << " GSS-API error " << callerMsg << ": " << (char*)msg.value;
+            std::string log_string = log_message.str();
+            rodsLogAndErrorMsg( LOG_ERROR, _r_error, status, "%s", log_string.substr(0, max_str_length).c_str());
             ( void ) gss_release_buffer( &minorStatus, &msg );
         }
         while ( msg_ctx );
@@ -1153,7 +1155,7 @@ extern "C" {
 
                 // =-=-=-=-=-=-=-
                 // handle errors and exit
-                if ( ( result = ASSERT_ERROR( status >= 0, status, "call to rcAuthRequest failed." ) ).ok() ) {
+                if ( ( result = ASSERT_ERROR( status >= 0, status, "call to rcAuthPluginRequest failed." ) ).ok() ) {
 
                     // =-=-=-=-=-=-=-
                     // copy over the resulting irods pam pasword
