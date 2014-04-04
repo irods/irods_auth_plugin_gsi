@@ -80,7 +80,7 @@ class Test_Gsi_Suite(unittest.TestCase, ResourceBase):
         # Make sure we have a valid proxy cert
         pipe = os.popen("grid-proxy-init -pwstdin > /dev/null", 'w')
         print("Writing password: %s to the grid-proxy-init" % gsiPassword)
-        pipe.write(gsiPassword)
+        pipe.write("irods")
         pipe.close()
 
         # Try an ils
