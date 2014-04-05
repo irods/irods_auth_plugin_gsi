@@ -78,12 +78,12 @@ class Test_Gsi_Suite(unittest.TestCase, ResourceBase):
         self.gsi_setup()
 
         # Make sure we have a valid proxy cert
-        pipe = os.popen("grid-proxy-init -pwstdin > /dev/null", 'w')
+        pipe = os.popen("grid-proxy-init -pwstdin", 'w')
         print("Writing password: %s to the grid-proxy-init" % gsiPassword)
-        pipe.write("irods")
+        pipe.write(gsiPassword)
         pipe.close()
 
         # Try an ils
-        assertiCmd(s.adminsession, "ils", "LIST", "home")
+        assertiCmd(s.adminsession, "echo irods | ils", "LIST", "home")
 
         self.gsi_teardown()
