@@ -84,6 +84,6 @@ class Test_Gsi_Suite(unittest.TestCase, ResourceBase):
         pipe.close()
 
         # Try an ils
-        assertiCmd(s.adminsession, "echo irods | ils", "LIST", "home")
+        assertiCmd(s.adminsession, "ils", "LIST", "home")
 
         self.gsi_teardown()
