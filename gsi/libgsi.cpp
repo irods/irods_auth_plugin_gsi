@@ -521,122 +521,119 @@ extern "C" {
 
     /// @brief Establish context - take the auth request results and massage them for the auth response call
     irods::error gsi_auth_establish_context(
-        irods::auth_plugin_context& _ctx,
-        authRequestOut_t* _req,
-        authResponseInp_t* _resp ) {
+        irods::auth_plugin_context& _ctx)
+    {
         irods::error result = SUCCESS();
         irods::error ret;
 
         ret = _ctx.valid<irods::gsi_auth_object>();
         if ( ( result = ASSERT_PASS( ret, "Invalid plugin context." ) ).ok() ) {
-            if ( ( result = ASSERT_ERROR( _req != NULL && _resp != NULL, SYS_INVALID_INPUT_PARAM, "Request or response pointer is null." ) ).ok() ) {
 
-                irods::gsi_auth_object_ptr ptr = boost::dynamic_pointer_cast<irods::gsi_auth_object>( _ctx.fco() );
-
-                int fd;
-
-                fd = ptr->sock();
-
-                igsi_rErrorPtr = ptr->r_error();
-
-                gss_OID oid = GSS_C_NULL_OID;
-                gss_buffer_desc send_tok, recv_tok, *tokenPtr;
-                gss_name_t target_name;
-                OM_uint32 majorStatus, minorStatus;
-                OM_uint32 flags = 0;
-
-                // overload the use of the username in the response structure
-                char* serverDN = NULL;
-                serverDN = getenv( "irodsServerDn" ); /* Use irodsServerDn if defined */
-                if ( serverDN == NULL ) {
-                    serverDN = getenv( "SERVER_DN" ); /* NULL or the SERVER_DN string */
-                }
-
-                ret = gsi_import_name( igsi_rErrorPtr, serverDN, &target_name, true );
-                if ( ( result = ASSERT_PASS( ret, "Failed to import username into GSI." ) ).ok() ) {
-
-                    /*
-                     * Perform the context-establishment loop.
-                     *
-                     * On each pass through the loop, tokenPtr points to the token
-                     * to send to the server (or GSS_C_NO_BUFFER on the first pass).
-                     * Every generated token is stored in send_tok which is then
-                     * transmitted to the server; every received token is stored in
-                     * recv_tok, which tokenPtr is then set to, to be processed by
-                     * the next call to gss_init_sec_context.
-                     *
-                     * GSS-API guarantees that send_tok's length will be non-zero
-                     * if and only if the server is expecting another token from us,
-                     * and that gss_init_sec_context returns GSS_S_CONTINUE_NEEDED if
-                     * and only if the server has another token to send us.
-                     */
-
-                    tokenPtr = GSS_C_NO_BUFFER;
-                    context[fd] = GSS_C_NO_CONTEXT;
-                    flags = GSS_C_MUTUAL_FLAG | GSS_C_REPLAY_FLAG;
-                    do {
-                        majorStatus = gss_init_sec_context( &minorStatus,
-                                                            ptr->creds(), &context[fd], target_name, oid,
-                                                            flags, 0,
-                                                            NULL,           /* no channel bindings */
-                                                            tokenPtr, NULL, /* ignore mech type */
-                                                            &send_tok, &context_flags,
-                                                            NULL ); /* ignore time_rec */
-
-                        /* since recv_tok is not malloc'ed, don't need to call
-                           gss_release_buffer, instead clear it. */
-                        memset( igsiScratchBuffer, 0, SCRATCH_BUFFER_SIZE );
-
-                        if ( !( result = ASSERT_ERROR( majorStatus == GSS_S_COMPLETE || majorStatus == GSS_S_CONTINUE_NEEDED,
-                                                       GSI_ERROR_INIT_SECURITY_CONTEXT, "Failed initializing GSI context. Major status: %d\tMinor status: %d" ) ).ok() ) {
-                            gsi_log_error( ptr->r_error(), "initializing context", majorStatus, minorStatus, true );
+            irods::gsi_auth_object_ptr ptr = boost::dynamic_pointer_cast<irods::gsi_auth_object>( _ctx.fco() );
+            
+            int fd;
+            
+            fd = ptr->sock();
+            
+            igsi_rErrorPtr = ptr->r_error();
+            
+            gss_OID oid = GSS_C_NULL_OID;
+            gss_buffer_desc send_tok, recv_tok, *tokenPtr;
+            gss_name_t target_name;
+            OM_uint32 majorStatus, minorStatus;
+            OM_uint32 flags = 0;
+            
+            // overload the use of the username in the response structure
+            char* serverDN = NULL;
+            serverDN = getenv( "irodsServerDn" ); /* Use irodsServerDn if defined */
+            if ( serverDN == NULL ) {
+                serverDN = getenv( "SERVER_DN" ); /* NULL or the SERVER_DN string */
+            }
+            
+            ret = gsi_import_name( igsi_rErrorPtr, serverDN, &target_name, true );
+            if ( ( result = ASSERT_PASS( ret, "Failed to import username into GSI." ) ).ok() ) {
+                
+                /*
+                 * Perform the context-establishment loop.
+                 *
+                 * On each pass through the loop, tokenPtr points to the token
+                 * to send to the server (or GSS_C_NO_BUFFER on the first pass).
+                 * Every generated token is stored in send_tok which is then
+                 * transmitted to the server; every received token is stored in
+                 * recv_tok, which tokenPtr is then set to, to be processed by
+                 * the next call to gss_init_sec_context.
+                 *
+                 * GSS-API guarantees that send_tok's length will be non-zero
+                 * if and only if the server is expecting another token from us,
+                 * and that gss_init_sec_context returns GSS_S_CONTINUE_NEEDED if
+                 * and only if the server has another token to send us.
+                 */
+                
+                tokenPtr = GSS_C_NO_BUFFER;
+                context[fd] = GSS_C_NO_CONTEXT;
+                flags = GSS_C_MUTUAL_FLAG | GSS_C_REPLAY_FLAG;
+                do {
+                    majorStatus = gss_init_sec_context( &minorStatus,
+                                                        ptr->creds(), &context[fd], target_name, oid,
+                                                        flags, 0,
+                                                        NULL,           /* no channel bindings */
+                                                        tokenPtr, NULL, /* ignore mech type */
+                                                        &send_tok, &context_flags,
+                                                        NULL ); /* ignore time_rec */
+                    
+                    /* since recv_tok is not malloc'ed, don't need to call
+                       gss_release_buffer, instead clear it. */
+                    memset( igsiScratchBuffer, 0, SCRATCH_BUFFER_SIZE );
+                    
+                    if ( !( result = ASSERT_ERROR( majorStatus == GSS_S_COMPLETE || majorStatus == GSS_S_CONTINUE_NEEDED,
+                                                   GSI_ERROR_INIT_SECURITY_CONTEXT, "Failed initializing GSI context. Major status: %d\tMinor status: %d" ) ).ok() ) {
+                        gsi_log_error( ptr->r_error(), "initializing context", majorStatus, minorStatus, true );
+                        ( void ) gss_release_name( &minorStatus, &target_name );
+                    }
+                    else {
+                        
+                        ret = gsi_send_token( &send_tok, fd );
+                        if ( !( result = ASSERT_PASS( ret, "Failed sending GSI token." ) ).ok() ) {
+                            ( void ) gss_release_buffer( &minorStatus, &send_tok );
                             ( void ) gss_release_name( &minorStatus, &target_name );
                         }
                         else {
-
-                            ret = gsi_send_token( &send_tok, fd );
-                            if ( !( result = ASSERT_PASS( ret, "Failed sending GSI token." ) ).ok() ) {
-                                ( void ) gss_release_buffer( &minorStatus, &send_tok );
-                                ( void ) gss_release_name( &minorStatus, &target_name );
-                            }
-                            else {
-                                ( void ) gss_release_buffer( &minorStatus, &send_tok );
-
-                                if ( majorStatus == GSS_S_CONTINUE_NEEDED ) {
-                                    recv_tok.value = &igsiScratchBuffer;
-                                    recv_tok.length = SCRATCH_BUFFER_SIZE;
-                                    unsigned int bytes_read;
-                                    ret = gsi_receive_token( fd, &recv_tok, &bytes_read );
-                                    if ( !( result = ASSERT_PASS( ret, "Error reading GSI token." ) ).ok() ) {
-                                        ( void ) gss_release_name( &minorStatus, &target_name );
-                                    }
-                                    else {
-                                        tokenPtr = &recv_tok;
-                                    }
+                            ( void ) gss_release_buffer( &minorStatus, &send_tok );
+                            
+                            if ( majorStatus == GSS_S_CONTINUE_NEEDED ) {
+                                recv_tok.value = &igsiScratchBuffer;
+                                recv_tok.length = SCRATCH_BUFFER_SIZE;
+                                unsigned int bytes_read;
+                                ret = gsi_receive_token( fd, &recv_tok, &bytes_read );
+                                if ( !( result = ASSERT_PASS( ret, "Error reading GSI token." ) ).ok() ) {
+                                    ( void ) gss_release_name( &minorStatus, &target_name );
+                                }
+                                else {
+                                    tokenPtr = &recv_tok;
                                 }
                             }
                         }
                     }
-                    while ( result.ok() && majorStatus == GSS_S_CONTINUE_NEEDED );
-
-                    if ( serverDN != 0 && strlen( serverDN ) > 0 ) {
-                        ( void ) gss_release_name( &minorStatus, &target_name );
-                    }
-
-                    if ( igsiDebugFlag > 0 ) {
-                        gsi_display_ctx_flags();
-                    }
-
-#if defined(IGSI_TIMING)
-                    ( void ) gettimeofday( &endTimeFunc, ( struct timezone * ) 0 );
-                    ( void ) _igsiTime( &sTimeDiff, &endTimeFunc, &startTimeFunc );
-                    fSec = ( float ) sTimeDiff.tv_sec + ( ( float ) sTimeDiff.tv_usec / 1000000.0 );
-
-                    /* for IGSI_TIMING  print time */
-                    fprintf( stdout, " ---  %.5f sec time taken for executing "
-                             "igsiEstablishContextClientside() ---  \n", fSec );
-#endif
                 }
+                while ( result.ok() && majorStatus == GSS_S_CONTINUE_NEEDED );
+                
+                if ( serverDN != 0 && strlen( serverDN ) > 0 ) {
+                    ( void ) gss_release_name( &minorStatus, &target_name );
+                }
+                
+                if ( igsiDebugFlag > 0 ) {
+                    gsi_display_ctx_flags();
+                }
+                
+#if defined(IGSI_TIMING)
+                ( void ) gettimeofday( &endTimeFunc, ( struct timezone * ) 0 );
+                ( void ) _igsiTime( &sTimeDiff, &endTimeFunc, &startTimeFunc );
+                fSec = ( float ) sTimeDiff.tv_sec + ( ( float ) sTimeDiff.tv_usec / 1000000.0 );
+                
+                /* for IGSI_TIMING  print time */
+                fprintf( stdout, " ---  %.5f sec time taken for executing "
+                         "igsiEstablishContextClientside() ---  \n", fSec );
+#endif
             }
         }
         return result;
