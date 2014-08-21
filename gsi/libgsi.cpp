@@ -1,5 +1,7 @@
 /* -*- mode: c++; fill-column: 132; c-basic-offset: 4; indent-tabs-mode: nil -*- */
 
+#include "authenticate.hpp"
+#include "reFuncDefs.hpp"
 #include "rodsErrorTable.hpp"
 #include "rodsLog.hpp"
 #include "miscServerFunct.hpp"
