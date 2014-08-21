@@ -83,6 +83,9 @@ class Test_Gsi_Suite(unittest.TestCase, ResourceBase):
         pipe.write(gsiPassword)
         pipe.close()
 
+        # Try an iinit
+        assertiCmd(s.adminsession, "iinit")
+
         # Try an ils
         assertiCmd(s.adminsession, "ils", "LIST", "home")
 
