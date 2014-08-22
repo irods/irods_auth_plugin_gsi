@@ -84,7 +84,7 @@ class Test_Gsi_Suite(unittest.TestCase, ResourceBase):
         pipe.close()
 
         # Try an iinit
-        assertiCmd(s.adminsession, "iinit")
+        assertiCmd(s.adminsession, "iinit", "LIST", "Using GSI, attempting connection/authentication")
 
         # Try an ils
         assertiCmd(s.adminsession, "ils", "LIST", "home")
