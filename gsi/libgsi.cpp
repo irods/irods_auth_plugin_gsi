@@ -15,7 +15,6 @@
 #include "gsiAuthRequest.hpp"
 #include "irods_kvp_string_parser.hpp"
 #include "authPluginRequest.hpp"
-#include "irods_client_server_negotiation.hpp"
 #include "irods_stacktrace.hpp"
 
 #include <gssapi.h>
@@ -917,7 +916,7 @@ extern "C" {
                                acGetUserByDN(*arg,*OUT)||msiExecCmd(t,"*arg",null,null,null,*OUT)|nop
                             */
                             ruleExecInfo_t rei;
-                            char *args[2];
+                            const char *args[2];
                             msParamArray_t *myMsParamArray;
                             msParamArray_t myInOutParamArray;
 
