@@ -842,6 +842,7 @@ extern "C" {
                 char *tResult;
                 int privLevel;
                 int clientPrivLevel;
+                int aliasPrivLevel;
                 int noNameMode;
 
 #ifdef GSI_DEBUG
@@ -852,6 +853,7 @@ extern "C" {
                 }
 #endif
 
+                aliasPrivLevel = 0;
                 gsiAuthReqStatus = 1;
 
                 ret = gsi_establish_context_serverside( _ctx, _comm, clientName, 500 );
@@ -980,6 +982,50 @@ extern "C" {
                             free( myBuf ); // JMC cppcheck - leak
                         }
                     }
+
+                    /* handle GSI proxy login (re-introduced from iRODS 3.3.1) */
+                    /* Already include the fix by Vlad Mencl to also search for zone */
+                    if (status == CAT_NO_ROWS_FOUND || genQueryOut==NULL) {
+                        /* First, try again, checking if the user is admin and, if so,
+                        allow the aliasing (typically via clientUserName environment
+                        variable) */
+                        memset (&genQueryInp, 0, sizeof (genQueryInp_t));
+
+                        snprintf (condition1, MAX_NAME_LEN, "='%s'", clientName);
+                        addInxVal (&genQueryInp.sqlCondInp, COL_USER_DN, condition1);
+
+                        snprintf (condition2, MAX_NAME_LEN, "='%s'", "rodsadmin");
+                        addInxVal (&genQueryInp.sqlCondInp, COL_USER_TYPE, condition2);
+
+                        addInxIval (&genQueryInp.selectInp, COL_USER_ID, 1);
+                        genQueryInp.maxRows = 2;
+
+                        status = rsGenQuery (_comm, &genQueryInp, &genQueryOut);
+
+                        if (status==0) {
+                           /* OK, the DN belongs to an admin, now get the client user
+                              info */
+                           aliasPrivLevel=LOCAL_PRIV_USER_AUTH;
+                           memset (&genQueryInp, 0, sizeof (genQueryInp_t));
+                           snprintf (condition1, MAX_NAME_LEN, "='%s'",
+                                   _comm->clientUser.userName);
+                           addInxVal (&genQueryInp.sqlCondInp, COL_USER_NAME, condition1);
+
+                           snprintf (condition2, MAX_NAME_LEN, "='%s'",
+                                   _comm->clientUser.rodsZone);
+                           addInxVal (&genQueryInp.sqlCondInp, COL_USER_ZONE, condition2);
+
+                           addInxIval (&genQueryInp.selectInp, COL_USER_ID, 1);
+                           addInxIval (&genQueryInp.selectInp, COL_USER_TYPE, 1);
+                           addInxIval (&genQueryInp.selectInp, COL_USER_ZONE, 1);
+
+                           genQueryInp.maxRows = 2;
+
+                           status = rsGenQuery (_comm, &genQueryInp, &genQueryOut);
+                        }
+                        /* leaving out original else branch as identical error handling is done just below */
+                    }
+
                     if ( !( result = ASSERT_ERROR( status != CAT_NO_ROWS_FOUND && genQueryOut != NULL, GSI_DN_DOES_NOT_MATCH_USER,
                                                    "DN mismatch, user=%s, Certificate DN+%s, status = %d.", _comm->clientUser.userName,
                                                    clientName, status ) ).ok() ) {
@@ -1057,6 +1103,10 @@ extern "C" {
                             if ( strcmp( tResult, "rodsadmin" ) == 0 ) {
                                 privLevel = LOCAL_PRIV_USER_AUTH;
                                 clientPrivLevel = LOCAL_PRIV_USER_AUTH;
+                            }
+
+                            if (aliasPrivLevel==LOCAL_PRIV_USER_AUTH) {
+                                privLevel = LOCAL_PRIV_USER_AUTH;
                             }
 
                             status = chkProxyUserPriv( _comm, privLevel );
