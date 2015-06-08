@@ -5,17 +5,20 @@
 #include "rodsErrorTable.hpp"
 #include "rodsLog.hpp"
 #include "miscServerFunct.hpp"
-#include "irods_error.hpp"
-#include "irods_gsi_object.hpp"
-#include "irods_auth_plugin.hpp"
-#include "irods_auth_constants.hpp"
 #include "authRequest.hpp"
 #include "authResponse.hpp"
 #include "authCheck.hpp"
 #include "gsiAuthRequest.hpp"
-#include "irods_kvp_string_parser.hpp"
 #include "authPluginRequest.hpp"
+#include "genQuery.hpp"
+#include "irods_kvp_string_parser.hpp"
 #include "irods_stacktrace.hpp"
+#include "irods_error.hpp"
+#include "irods_gsi_object.hpp"
+#include "irods_auth_plugin.hpp"
+#include "irods_auth_constants.hpp"
+
+#include <openssl/md5.h>
 
 #include <gssapi.h>
 
@@ -1271,8 +1274,7 @@ extern "C" {
 
                 irods::kvp_map_t kvp;
                 kvp[irods::AUTH_SCHEME_KEY] = irods::AUTH_GSI_SCHEME;
-                std::string resp_str;
-                irods::kvp_string( kvp, resp_str );
+                std::string resp_str = irods::kvp_string( kvp );
 
                 // =-=-=-=-=-=-=-
                 // build the response string
@@ -1372,9 +1374,9 @@ extern "C" {
                                     }
                                     else {
                                         strncpy( md5Buf + CHALLENGE_LEN, serverId, len );
-                                        MD5Init( &context );
-                                        MD5Update( &context, ( unsigned char* )md5Buf, CHALLENGE_LEN + MAX_PASSWORD_LEN );
-                                        MD5Final( ( unsigned char* )digest, &context );
+                                        MD5_Init( &context );
+                                        MD5_Update( &context, ( unsigned char* )md5Buf, CHALLENGE_LEN + MAX_PASSWORD_LEN );
+                                        MD5_Final( ( unsigned char* )digest, &context );
                                         for ( i = 0; i < RESPONSE_LEN; i++ ) {
                                             if ( digest[i] == '\0' ) {
                                                 digest[i]++;
