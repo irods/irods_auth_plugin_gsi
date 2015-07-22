@@ -826,15 +826,12 @@ extern "C" {
     /// @brief Setup auth object with relevant information
     irods::error gsi_auth_agent_start(
         irods::auth_plugin_context& _ctx,
-        rsComm_t* _comm,
-        const char* _context ) {
+        const char*                 _context ) {
         irods::error result = SUCCESS();
         irods::error ret;
 
         ret = _ctx.valid<irods::gsi_auth_object>();
         if ( ( result = ASSERT_PASS( ret, "Invalid plugin context" ) ).ok() ) {
-            if ( ( result = ASSERT_ERROR( _comm != NULL, SYS_INVALID_INPUT_PARAM, "Null rcComm_t pointer." ) ).ok() ) {
-
                 irods::gsi_auth_object_ptr ptr = boost::dynamic_pointer_cast<irods::gsi_auth_object>( _ctx.fco() );
                 int status;
                 char clientName[500];
@@ -859,7 +856,7 @@ extern "C" {
                 aliasPrivLevel = 0;
                 gsiAuthReqStatus = 1;
 
-                ret = gsi_establish_context_serverside( _ctx, _comm, clientName, 500 );
+                ret = gsi_establish_context_serverside( _ctx, _ctx.comm(), clientName, 500 );
                 if ( ( result = ASSERT_PASS( ret, "Failed to establish server side context." ) ).ok() ) {
 
 #ifdef GSI_DEBUG
@@ -871,14 +868,14 @@ extern "C" {
                     memset( &genQueryInp, 0, sizeof( genQueryInp_t ) );
 
                     noNameMode = 0;
-                    if ( strlen( _comm->clientUser.userName ) > 0 ) {
+                    if ( strlen( _ctx.comm()->clientUser.userName ) > 0 ) {
                         /* regular mode */
 
                         snprintf( condition1, MAX_NAME_LEN, "='%s'", clientName );
                         addInxVal( &genQueryInp.sqlCondInp, COL_USER_DN, condition1 );
 
                         snprintf( condition2, MAX_NAME_LEN, "='%s'",
-                                  _comm->clientUser.userName );
+                                  _ctx.comm()->clientUser.userName );
                         addInxVal( &genQueryInp.sqlCondInp, COL_USER_NAME, condition2 );
 
                         addInxIval( &genQueryInp.selectInp, COL_USER_ID, 1 );
@@ -887,7 +884,7 @@ extern "C" {
 
                         genQueryInp.maxRows = 2;
 
-                        status = rsGenQuery( _comm, &genQueryInp, &genQueryOut );
+                        status = rsGenQuery( _ctx.comm(), &genQueryInp, &genQueryOut );
                     }
                     else {
                         /*
@@ -908,7 +905,7 @@ extern "C" {
 
                         genQueryInp.maxRows = 2;
 
-                        status = rsGenQuery( _comm, &genQueryInp, &genQueryOut );
+                        status = rsGenQuery( _ctx.comm(), &genQueryInp, &genQueryOut );
 
                         if ( status == CAT_NO_ROWS_FOUND ) { /* not found */
                             /* execute the rule acGetUserByDN.  By default this
@@ -926,9 +923,9 @@ extern "C" {
                             msParamArray_t myInOutParamArray;
 
                             memset( ( char* )&rei, 0, sizeof( rei ) );
-                            rei.rsComm = _comm;
-                            rei.uoic = &_comm->clientUser;
-                            rei.uoip = &_comm->proxyUser;
+                            rei.rsComm = _ctx.comm();
+                            rei.uoic = &_ctx.comm()->clientUser;
+                            rei.uoip = &_ctx.comm()->proxyUser;
                             args[0] = clientName;
                             char out[200] = "*cmdOutput";
                             args[1] = out;
@@ -966,21 +963,21 @@ extern "C" {
 
                             genQueryInp.maxRows = 2;
 
-                            status = rsGenQuery( _comm, &genQueryInp, &genQueryOut );
+                            status = rsGenQuery( _ctx.comm(), &genQueryInp, &genQueryOut );
                         }
                         if ( status == 0 ) {
                             char *myBuf;
-                            strncpy( _comm->clientUser.userName, genQueryOut->sqlResult[2].value,
+                            strncpy( _ctx.comm()->clientUser.userName, genQueryOut->sqlResult[2].value,
                                      NAME_LEN );
-                            strncpy( _comm->proxyUser.userName, genQueryOut->sqlResult[2].value,
+                            strncpy( _ctx.comm()->proxyUser.userName, genQueryOut->sqlResult[2].value,
                                      NAME_LEN );
-                            strncpy( _comm->clientUser.rodsZone, genQueryOut->sqlResult[3].value,
+                            strncpy( _ctx.comm()->clientUser.rodsZone, genQueryOut->sqlResult[3].value,
                                      NAME_LEN );
-                            strncpy( _comm->proxyUser.rodsZone, genQueryOut->sqlResult[3].value,
+                            strncpy( _ctx.comm()->proxyUser.rodsZone, genQueryOut->sqlResult[3].value,
                                      NAME_LEN );
                             myBuf = ( char * )malloc( NAME_LEN * 2 );
                             snprintf( myBuf, NAME_LEN * 2, "%s=%s", SP_CLIENT_USER,
-                                      _comm->clientUser.userName );
+                                      _ctx.comm()->clientUser.userName );
                             putenv( myBuf );
                             free( myBuf ); // JMC cppcheck - leak
                         }
@@ -1003,7 +1000,7 @@ extern "C" {
                         addInxIval (&genQueryInp.selectInp, COL_USER_ID, 1);
                         genQueryInp.maxRows = 2;
 
-                        status = rsGenQuery (_comm, &genQueryInp, &genQueryOut);
+                        status = rsGenQuery (_ctx.comm(), &genQueryInp, &genQueryOut);
 
                         if (status==0) {
                            /* OK, the DN belongs to an admin, now get the client user
@@ -1011,11 +1008,11 @@ extern "C" {
                            aliasPrivLevel=LOCAL_PRIV_USER_AUTH;
                            memset (&genQueryInp, 0, sizeof (genQueryInp_t));
                            snprintf (condition1, MAX_NAME_LEN, "='%s'",
-                                   _comm->clientUser.userName);
+                                   _ctx.comm()->clientUser.userName);
                            addInxVal (&genQueryInp.sqlCondInp, COL_USER_NAME, condition1);
 
                            snprintf (condition2, MAX_NAME_LEN, "='%s'",
-                                   _comm->clientUser.rodsZone);
+                                   _ctx.comm()->clientUser.rodsZone);
                            addInxVal (&genQueryInp.sqlCondInp, COL_USER_ZONE, condition2);
 
                            addInxIval (&genQueryInp.selectInp, COL_USER_ID, 1);
@@ -1024,22 +1021,22 @@ extern "C" {
 
                            genQueryInp.maxRows = 2;
 
-                           status = rsGenQuery (_comm, &genQueryInp, &genQueryOut);
+                           status = rsGenQuery (_ctx.comm(), &genQueryInp, &genQueryOut);
                         }
                         /* leaving out original else branch as identical error handling is done just below */
                     }
 
                     if ( !( result = ASSERT_ERROR( status != CAT_NO_ROWS_FOUND && genQueryOut != NULL, GSI_DN_DOES_NOT_MATCH_USER,
-                                                   "DN mismatch, user=%s, Certificate DN+%s, status = %d.", _comm->clientUser.userName,
+                                                   "DN mismatch, user=%s, Certificate DN+%s, status = %d.", _ctx.comm()->clientUser.userName,
                                                    clientName, status ) ).ok() ) {
                         rodsLog( LOG_NOTICE,
                                  "igsiServersideAuth: DN mismatch, user=%s, Certificate DN=%s, status=%d",
-                                 _comm->clientUser.userName,
+                                 _ctx.comm()->clientUser.userName,
                                  clientName,
                                  status );
                         snprintf( gsiAuthReqErrorMsg, sizeof gsiAuthReqErrorMsg,
                                   "igsiServersideAuth: DN mismatch, user=%s, Certificate DN=%s, status=%d",
-                                  _comm->clientUser.userName,
+                                  _ctx.comm()->clientUser.userName,
                                   clientName,
                                   status );
                         gsiAuthReqError = status;
@@ -1112,23 +1109,23 @@ extern "C" {
                                 privLevel = LOCAL_PRIV_USER_AUTH;
                             }
 
-                            status = chkProxyUserPriv( _comm, privLevel );
+                            status = chkProxyUserPriv( _ctx.comm(), privLevel );
                             if ( ( result = ASSERT_ERROR( status >= 0, status, "Failed checking proxy user priviledges." ) ).ok() ) {
 
-                                _comm->proxyUser.authInfo.authFlag = privLevel;
-                                _comm->clientUser.authInfo.authFlag = clientPrivLevel;
+                                _ctx.comm()->proxyUser.authInfo.authFlag = privLevel;
+                                _ctx.comm()->clientUser.authInfo.authFlag = clientPrivLevel;
 
                                 // Reset the auth scheme here so we do not try to authenticate again unless the client requests it.
-                                if ( _comm->auth_scheme != NULL ) {
-                                    free( _comm->auth_scheme );
+                                if ( _ctx.comm()->auth_scheme != NULL ) {
+                                    free( _ctx.comm()->auth_scheme );
                                 }
-                                _comm->auth_scheme = NULL;
+                                _ctx.comm()->auth_scheme = NULL;
 
                                 if ( noNameMode ) { /* We didn't before, but now have an irodsUserName */
                                     int status2, status3;
                                     rodsServerHost_t *rodsServerHost = NULL;
-                                    status2 = getAndConnRcatHost( _comm, MASTER_RCAT,
-                                                                  _comm->myEnv.rodsZone, &rodsServerHost );
+                                    status2 = getAndConnRcatHost( _ctx.comm(), MASTER_RCAT,
+                                                                  _ctx.comm()->myEnv.rodsZone, &rodsServerHost );
                                     if ( status2 >= 0 &&
                                             rodsServerHost->localFlag == REMOTE_HOST &&
                                             rodsServerHost->conn != NULL ) {  /* If the IES is remote */
@@ -1141,8 +1138,8 @@ extern "C" {
                                         rodsServerHost->conn = NULL;
 
                                         /* And reconnect (with irodsUserName here and in the IES): */
-                                        status3 = getAndConnRcatHost( _comm, MASTER_RCAT,
-                                                                      _comm->myEnv.rodsZone,
+                                        status3 = getAndConnRcatHost( _ctx.comm(), MASTER_RCAT,
+                                                                      _ctx.comm()->myEnv.rodsZone,
                                                                       &rodsServerHost );
                                         if ( !( result = ASSERT_ERROR( status3 == 0, status3,
                                                                        "GSI server side auth failed in connecting to Rcat host, status = %d.",
@@ -1154,12 +1151,12 @@ extern "C" {
                                     }
                                 }
 
-                            } // if ((result = ASSERT_ERROR(status >= 0, status, "Failed checking proxy user priviledges." )).ok()) {
-                        } // if(result.ok()) {
-                    } // if ((result = ASSERT_ERROR(status >= 0, status, "rsGenQuery failed, status = %d.", status )).ok()) {
-                } // if((result = ASSERT_PASS(ret, "Failed to establish server side context.")).ok()) {
-            } // if ( ( result = ASSERT_ERROR( _comm != NULL, SYS_INVALID_INPUT_PARAM, "Null rcComm_t pointer." ) ).ok() ) {
-        } // if ( ( result = ASSERT_PASS( ret, "Invalid plugin context" ) ).ok() ) {
+                            } // if ((result = ASSERT_ERROR(status >= 0, status, "Failed checking proxy user priviledges." )).ok()) 
+                        } // if(result.ok()) 
+                    } // if ((result = ASSERT_ERROR(status >= 0, status, "rsGenQuery failed, status = %d.", status )).ok()) 
+                } // if((result = ASSERT_PASS(ret, "Failed to establish server side context.")).ok()) 
+            
+        } // if ( ( result = ASSERT_PASS( ret, "Invalid plugin context" ) ).ok() ) 
 
         return result;
     }
@@ -1220,37 +1217,33 @@ extern "C" {
     }
 
     irods::error gsi_auth_agent_request(
-        irods::auth_plugin_context& _ctx,
-        rsComm_t* _comm ) {
+        irods::auth_plugin_context& _ctx ) {
         irods::error result = SUCCESS();
         irods::error ret;
 
         // validate incoming parameters
         ret = _ctx.valid<irods::gsi_auth_object>();
         if ( ( result = ASSERT_PASS( ret, "Invalid plugin context." ) ).ok() ) {
-            if ( ( result = ASSERT_ERROR( _comm, SYS_INVALID_INPUT_PARAM, "Null comm pointer." ) ).ok() ) {
-
-                if ( gsiAuthReqStatus == 1 ) {
-                    gsiAuthReqStatus = 0;
-                    if ( !( result = ASSERT_ERROR( gsiAuthReqError == 0, gsiAuthReqError,
-                                                   "A GSI auth request error has occurred." ) ).ok() ) {
-                        rodsLogAndErrorMsg( LOG_NOTICE, &_comm->rError, gsiAuthReqError,
-                                            gsiAuthReqErrorMsg );
-                    }
+            if ( gsiAuthReqStatus == 1 ) {
+                gsiAuthReqStatus = 0;
+                if ( !( result = ASSERT_ERROR( gsiAuthReqError == 0, gsiAuthReqError,
+                                "A GSI auth request error has occurred." ) ).ok() ) {
+                    rodsLogAndErrorMsg( LOG_NOTICE, &_ctx.comm()->rError, gsiAuthReqError,
+                            gsiAuthReqErrorMsg );
                 }
+            }
 
-                if ( result.ok() ) {
-                    irods::gsi_auth_object_ptr ptr = boost::dynamic_pointer_cast<irods::gsi_auth_object>( _ctx.fco() );
-                    std::string server_dn;
-                    ret = gsi_setup_creds( ptr, false, server_dn );
-                    if ( ( result = ASSERT_PASS( ret, "Setting up GSI credentials failed." ) ).ok() ) {
-                        _comm->gsiRequest = 1;
-                        if ( _comm->auth_scheme != NULL ) {
-                            free( _comm->auth_scheme );
-                        }
-                        _comm->auth_scheme = strdup( irods::AUTH_GSI_SCHEME.c_str() );
-                        ptr->server_dn( server_dn );
+            if ( result.ok() ) {
+                irods::gsi_auth_object_ptr ptr = boost::dynamic_pointer_cast<irods::gsi_auth_object>( _ctx.fco() );
+                std::string server_dn;
+                ret = gsi_setup_creds( ptr, false, server_dn );
+                if ( ( result = ASSERT_PASS( ret, "Setting up GSI credentials failed." ) ).ok() ) {
+                    _ctx.comm()->gsiRequest = 1;
+                    if ( _ctx.comm()->auth_scheme != NULL ) {
+                        free( _ctx.comm()->auth_scheme );
                     }
+                    _ctx.comm()->auth_scheme = strdup( irods::AUTH_GSI_SCHEME.c_str() );
+                    ptr->server_dn( server_dn );
                 }
             }
         }
@@ -1300,16 +1293,13 @@ extern "C" {
 
     irods::error gsi_auth_agent_response(
         irods::auth_plugin_context& _ctx,
-        rsComm_t* _comm,
-        authResponseInp_t* _resp ) {
+        authResponseInp_t*          _resp ) {
         irods::error result = SUCCESS();
         irods::error ret;
 
         // validate incoming parameters
         ret = _ctx.valid<irods::gsi_auth_object>();
         if ( ( result = ASSERT_PASS( ret, "Invalid plugin context." ) ).ok() ) {
-            if ( ( result = ASSERT_ERROR( _comm, SYS_INVALID_INPUT_PARAM, "Null comm pointer." ) ).ok() ) {
-
                 int status;
                 char *bufp;
                 authCheckInp_t authCheckInp;
@@ -1326,8 +1316,8 @@ extern "C" {
                 /* need to do NoLogin because it could get into inf loop for cross
                  * zone auth */
 
-                status = getAndConnRcatHostNoLogin( _comm, MASTER_RCAT,
-                                                    _comm->proxyUser.rodsZone, &rodsServerHost );
+                status = getAndConnRcatHostNoLogin( _ctx.comm(), MASTER_RCAT,
+                                                    _ctx.comm()->proxyUser.rodsZone, &rodsServerHost );
                 if ( ( result = ASSERT_ERROR( status >= 0, status, "Connecting to rcat host failed." ) ).ok() ) {
 
                     memset( &authCheckInp, 0, sizeof( authCheckInp ) );
@@ -1336,7 +1326,7 @@ extern "C" {
                     authCheckInp.username = _resp->username;
 
                     if ( rodsServerHost->localFlag == LOCAL_HOST ) {
-                        status = rsAuthCheck( _comm, &authCheckInp, &authCheckOut );
+                        status = rsAuthCheck( _ctx.comm(), &authCheckInp, &authCheckOut );
                     }
                     else {
                         status = rcAuthCheck( rodsServerHost->conn, &authCheckInp, &authCheckOut );
@@ -1409,11 +1399,11 @@ extern "C" {
 #endif
 
                         /* Set the clientUser zone if it is null. */
-                        if ( result.ok() && strlen( _comm->clientUser.rodsZone ) == 0 ) {
+                        if ( result.ok() && strlen( _ctx.comm()->clientUser.rodsZone ) == 0 ) {
                             zoneInfo_t *tmpZoneInfo;
                             status = getLocalZoneInfo( &tmpZoneInfo );
                             if ( ( result = ASSERT_ERROR( status >= 0, status, "getLocalZoneInfo failed." ) ).ok() ) {
-                                strncpy( _comm->clientUser.rodsZone, tmpZoneInfo->zoneName, NAME_LEN );
+                                strncpy( _ctx.comm()->clientUser.rodsZone, tmpZoneInfo->zoneName, NAME_LEN );
                             }
                         }
 
@@ -1433,14 +1423,14 @@ extern "C" {
                             }
 
                             /* adjust client user */
-                            if ( strcmp( _comm->proxyUser.userName,  _comm->clientUser.userName ) == 0 ) {
+                            if ( strcmp( _ctx.comm()->proxyUser.userName,  _ctx.comm()->clientUser.userName ) == 0 ) {
                                 authCheckOut->clientPrivLevel = authCheckOut->privLevel;
                             }
                             else {
                                 zoneInfo_t *tmpZoneInfo;
                                 status = getLocalZoneInfo( &tmpZoneInfo );
                                 if ( ( result = ASSERT_ERROR( status >= 0, status, "getLocalZoneInfo failed." ) ).ok() ) {
-                                    if ( strcmp( tmpZoneInfo->zoneName,  _comm->clientUser.rodsZone ) == 0 ) {
+                                    if ( strcmp( tmpZoneInfo->zoneName,  _ctx.comm()->clientUser.rodsZone ) == 0 ) {
                                         /* client is from local zone */
                                         if ( authCheckOut->clientPrivLevel == REMOTE_PRIV_USER_AUTH ) {
                                             authCheckOut->clientPrivLevel = LOCAL_PRIV_USER_AUTH;
@@ -1461,12 +1451,12 @@ extern "C" {
                                 }
                             }
                         }
-                        else if ( strcmp( _comm->proxyUser.userName,  _comm->clientUser.userName ) == 0 ) {
+                        else if ( strcmp( _ctx.comm()->proxyUser.userName,  _ctx.comm()->clientUser.userName ) == 0 ) {
                             authCheckOut->clientPrivLevel = authCheckOut->privLevel;
                         }
 
                         if ( result.ok() ) {
-                            ret = check_proxy_user_privileges( _comm, authCheckOut->privLevel );
+                            ret = check_proxy_user_privileges( _ctx.comm(), authCheckOut->privLevel );
 
                             if ( ( result = ASSERT_PASS( ret, "Check proxy user priviledges failed." ) ).ok() ) {
                                 rodsLog( LOG_NOTICE,
@@ -1474,16 +1464,16 @@ extern "C" {
                                          authCheckOut->privLevel,
                                          authCheckOut->clientPrivLevel,
                                          authCheckInp.username,
-                                         _comm->proxyUser.userName,
-                                         _comm->clientUser.userName );
+                                         _ctx.comm()->proxyUser.userName,
+                                         _ctx.comm()->clientUser.userName );
 
-                                if ( strcmp( _comm->proxyUser.userName,  _comm->clientUser.userName ) != 0 ) {
-                                    _comm->proxyUser.authInfo.authFlag = authCheckOut->privLevel;
-                                    _comm->clientUser.authInfo.authFlag = authCheckOut->clientPrivLevel;
+                                if ( strcmp( _ctx.comm()->proxyUser.userName,  _ctx.comm()->clientUser.userName ) != 0 ) {
+                                    _ctx.comm()->proxyUser.authInfo.authFlag = authCheckOut->privLevel;
+                                    _ctx.comm()->clientUser.authInfo.authFlag = authCheckOut->clientPrivLevel;
                                 }
                                 else {          /* proxyUser and clientUser are the same */
-                                    _comm->proxyUser.authInfo.authFlag =
-                                        _comm->clientUser.authInfo.authFlag = authCheckOut->privLevel;
+                                    _ctx.comm()->proxyUser.authInfo.authFlag =
+                                        _ctx.comm()->clientUser.authInfo.authFlag = authCheckOut->privLevel;
                                 }
 
                             }
@@ -1497,7 +1487,6 @@ extern "C" {
 
                     free( authCheckOut );
                 }
-            }
         }
         return result;
     }
