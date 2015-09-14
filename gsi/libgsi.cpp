@@ -1034,7 +1034,7 @@ extern "C" {
                     }
 
                     if ( !( result = ASSERT_ERROR( status != CAT_NO_ROWS_FOUND && genQueryOut != NULL, GSI_DN_DOES_NOT_MATCH_USER,
-                                                   "DN mismatch, user=%s, Certificate DN+%s, status = %d.", _ctx.comm()->clientUser.userName,
+                                                   "DN mismatch, user=%s, Certificate DN=%s, status = %d.", _ctx.comm()->clientUser.userName,
                                                    clientName, status ) ).ok() ) {
                         rodsLog( LOG_NOTICE,
                                  "igsiServersideAuth: DN mismatch, user=%s, Certificate DN=%s, status=%d",
