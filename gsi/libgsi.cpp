@@ -26,13 +26,8 @@
 
 #include <string.h>
 
+
 extern "C" {
-	// locally define the interface version function in order to
-	// no longer need to link against the irods client interface
-	double get_plugin_interface_version() {
-		static const double PLUGIN_INTERFACE_VERSION = 1.0;
-		return PLUGIN_INTERFACE_VERSION;
-	}
 
     // =-=-=-=-=-=-=-
     // 1. Define plugin Version Variable, used in plugin

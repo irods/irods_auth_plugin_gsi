@@ -4,8 +4,7 @@ SRCS = libgsi.cpp
 
 HEADERS = 
 
-EXTRALIBS = \
-            -lglobus_gss_assist$(GSI_INSTALL_TYPE2) \
+EXTRALIBS = -lglobus_gss_assist$(GSI_INSTALL_TYPE2) \
 	    -lglobus_gssapi_gsi$(GSI_INSTALL_TYPE2) \
             -lglobus_gsi_credential$(GSI_INSTALL_TYPE2) \
             -lglobus_gsi_proxy_core$(GSI_INSTALL_TYPE2) \
@@ -20,7 +19,10 @@ EXTRALIBS = \
             -lcrypto \
 	    -lglobus_common$(GSI_INSTALL_TYPE2) \
 	    -lglobus_callout$(GSI_INSTALL_TYPE2) \
-	    -lltdl$(GSI_INSTALL_TYPE2) 
+	    -lltdl$(GSI_INSTALL_TYPE2) \
+		/usr/lib/libirods_client_api_table.a \
+                /usr/lib/libirods_client_plugins.a
+
 
 
 include ../Makefile.base
