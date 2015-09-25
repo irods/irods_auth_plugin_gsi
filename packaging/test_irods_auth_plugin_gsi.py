@@ -1,61 +1,154 @@
 import os
-
 import sys
-if sys.version_info >= (2,7):
+if sys.version_info >= (2, 7):
     import unittest
 else:
     import unittest2 as unittest
+import shutil
+import json
+import lib
 
-from resource_suite import ResourceBase
 
+# JSON config file must have:
+#    'client_user_proxy' : path to (a copy of) the client user proxy
+#        that proxy file must be owned by irods and have access set to 600
+#    'client_user_DN' : the client user certificate's distinguished name (grid-cert-info --subject)
+CFG_FILE_PATH = '/tmp/gsi_test_cfg.json'
 
-class Test_Gsi(ResourceBase, unittest.TestCase):
+class Test_Authentication(unittest.TestCase):
+
+    '''Tests GSI authentication for a regular user.
+    '''
+
     def setUp(self):
-        super(Test_Gsi, self).setUp()
-        globusDirSrc = '~/secrets/gsi/.globus'
-        irodsHome = "~/"
-        globusDirDest = irodsHome + '.globus'
-        privateKey = globusDirDest + '/userkey.pem'
+        super(Test_Authentication, self).setUp()
 
-        # Untar the .globus directory to the irods home dir
-        if not os.path.exists(globusDirDest):
-            os.system("cp -r %s %s" % (globusDirSrc, globusDirDest))
-            os.system("chmod 600 %s" % privateKey)
+        # load tree from file
+        with open(CFG_FILE_PATH) as cfg_file:
+            self.config = json.load(cfg_file)
 
-        # Set the DN for the user
-        os.system("iadmin aua rods '/O=Grid/OU=GlobusTest/OU=simpleCA-pluto/OU=local/CN=irods'")
+        # local test dir
+        self.testing_tmp_dir = '/tmp/irods_Test_Authentication'
+        shutil.rmtree(self.testing_tmp_dir, ignore_errors=True)
+        os.mkdir(self.testing_tmp_dir)
 
-        try:
-            self.prev_auth_scheme = os.environ['IRODS_AUTHENTICATION_SCHEME']
-        except KeyError:
-            self.prev_auth_scheme = None
-        os.environ['IRODS_AUTHENTICATION_SCHEME'] = 'gsi'
+        # admin sesh
+        self.admin = lib.make_session_for_existing_admin()
+
+        # make new user with no password
+        self.gsi_username = 'gsi_user'
+        self.gsi_user = lib.mkuser_and_return_session(
+            'rodsuser', self.gsi_username, None, lib.get_hostname())
+
+        # set auth scheme for new user (client side)
+        self.gsi_user.environment_file_contents[
+            'irods_authentication_scheme'] = 'GSI'
+
+        # set auth string for new user (server side)
+        #user_DN = '/O=Grid/OU=GlobusTest/OU=simpleCA-gsi1/OU=Globus Simple CA/CN=antoine de torcy'
+        self.admin.run_icommand(['iadmin', 'aua', self.gsi_username, self.config['client_user_DN']])
 
     def tearDown(self):
-        if self.prev_auth_scheme:
-            os.environ['IRODS_AUTHENTICATION_SCHEME'] = self.prev_auth_scheme
-        super(Test_Gsi, self).tearDown()
+        # exit user sesh
+        self.gsi_user.__exit__()
 
-    # Try to authenticate before getting a certificate. Make sure this fails.
-    def test_authentication_gsi_without_cert(self):
-        # Destroy the proxy certs so we can test for failure
-        os.system("grid-proxy-destroy")
+        # remove gsi user
+        self.admin.run_icommand(['iadmin', 'rmuser', self.gsi_username])
 
-        # Try an ils and make sure it fails
-        self.admin.assert_icommand("ils", 'STDERR_SINGLELINE', "GSI_ERROR_ACQUIRING_CREDS")
+        # exit admin sesh
+        self.admin.__exit__()
 
-    # Try to authenticate after getting a TGT. This should pass
-    def test_authentication_gsi_with_cert(self):
-        gsiPassword = "irods"
+        # remove local test dir
+        shutil.rmtree(self.testing_tmp_dir)
 
-        # Make sure we have a valid proxy cert
-        pipe = os.popen("grid-proxy-init -pwstdin", 'w')
-        print "Writing password: %s to the grid-proxy-init" % gsiPassword
-        pipe.write(gsiPassword)
-        pipe.close()
+        super(Test_Authentication, self).tearDown()
 
-        # Try an iinit
-        self.admin.assert_icommand("iinit", 'STDOUT_SINGLELINE', "Using GSI, attempting connection/authentication")
+    def test_ils(self):
+        # set client env
+        env = os.environ.copy()
+        env['X509_USER_PROXY'] = self.config['client_user_proxy']
 
-        # Try an ils
-        self.admin.assert_icommand("ils", 'STDOUT_SINGLELINE', "home")
+        self.gsi_user.assert_icommand(
+            'ils', 'STDOUT_SINGLELINE', self.gsi_user.home_collection, env=env)
+
+    def test_irsync_r_nested_dir_to_coll(self):
+        # test settings
+        depth = 10
+        files_per_level = 100
+        file_size = 100
+
+        # make local nested dirs
+        base_name = "test_irsync_r_nested_dir_to_coll"
+        local_dir = os.path.join(self.testing_tmp_dir, base_name)
+        local_dirs = lib.make_deep_local_tmp_dir(
+            local_dir, depth, files_per_level, file_size)
+
+        # set client env
+        env = os.environ.copy()
+        env['X509_USER_PROXY'] = self.config['client_user_proxy']
+
+        # sync dir to coll
+        self.gsi_user.assert_icommand(
+            "irsync -r {local_dir} i:{base_name}".format(**locals()), "EMPTY", env=env)
+
+        # compare files at each level
+        for directory, files in local_dirs.iteritems():
+            partial_path = directory.replace(self.testing_tmp_dir + '/', '', 1)
+
+            # run ils on subcollection
+            self.gsi_user.assert_icommand(
+                ['ils', partial_path], 'STDOUT_SINGLELINE', env=env)
+            ils_out = lib.ils_output_to_entries(
+                self.gsi_user.run_icommand(['ils', partial_path], env=env)[1])
+
+            # compare local files with irods objects
+            local_files = set(files)
+            rods_files = set(lib.files_in_ils_output(ils_out))
+            self.assertTrue(local_files == rods_files,
+                            msg="Files missing:\n" + str(local_files - rods_files) + "\n\n" +
+                            "Extra files:\n" + str(rods_files - local_files))
+
+        # cleanup
+        self.gsi_user.assert_icommand(
+            "irm -rf {base_name}".format(**locals()), "EMPTY", env=env)
+
+    def test_irsync_r_nested_dir_to_coll_large_files(self):
+        # test settings
+        depth = 4
+        files_per_level = 4
+        file_size = 1024 * 1024 * 40
+
+        # make local nested dirs
+        base_name = "test_irsync_r_nested_dir_to_coll"
+        local_dir = os.path.join(self.testing_tmp_dir, base_name)
+        local_dirs = lib.make_deep_local_tmp_dir(
+            local_dir, depth, files_per_level, file_size)
+
+        # set client env
+        env = os.environ.copy()
+        env['X509_USER_PROXY'] = self.config['client_user_proxy']
+
+        # sync dir to coll
+        self.gsi_user.assert_icommand(
+            "irsync -r {local_dir} i:{base_name}".format(**locals()), "EMPTY", env=env)
+
+        # compare files at each level
+        for directory, files in local_dirs.iteritems():
+            partial_path = directory.replace(self.testing_tmp_dir + '/', '', 1)
+
+            # run ils on subcollection
+            self.gsi_user.assert_icommand(
+                ['ils', partial_path], 'STDOUT_SINGLELINE', env=env)
+            ils_out = lib.ils_output_to_entries(
+                self.gsi_user.run_icommand(['ils', partial_path], env=env)[1])
+
+            # compare local files with irods objects
+            local_files = set(files)
+            rods_files = set(lib.files_in_ils_output(ils_out))
+            self.assertTrue(local_files == rods_files,
+                            msg="Files missing:\n" + str(local_files - rods_files) + "\n\n" +
+                            "Extra files:\n" + str(rods_files - local_files))
+
+        # cleanup
+        self.gsi_user.assert_icommand(
+            "irm -rf {base_name}".format(**locals()), "EMPTY", env=env)
