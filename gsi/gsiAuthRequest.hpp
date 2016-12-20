@@ -8,12 +8,12 @@
 
 /* This is a Metadata API call */
 
-#include "rods.hpp"
-#include "rcMisc.hpp"
-#include "procApiRequest.hpp"
-#include "apiNumber.hpp"
+#include "rods.h"
+#include "rcMisc.h"
+#include "procApiRequest.h"
+#include "apiNumber.h"
 #include "initServer.hpp"
-#include "icatDefines.hpp"
+#include "icatDefines.h"
 
 typedef struct {
         char *serverDN;

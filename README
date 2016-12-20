@@ -7,9 +7,3 @@ To build the GSI Auth Plugin, you will need to have:
      http://irods.org/download
 
  - globus-proxy-utils installed for your platform
-
-Then to build this auth plugin:
-
-  ./packaging/build.sh
-
-
