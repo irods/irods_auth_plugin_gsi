@@ -7,3 +7,8 @@ To build the GSI Auth Plugin, you will need to have:
      http://irods.org/download
 
  - globus-proxy-utils installed for your platform
+
+Note:
+
+Once installed, the `X509_USER_CERT` and `X509_USER_KEY` are necessary to be set for the service EVEN IF the default paths are used.
+(i.e. /etc/grid-security/service/servicekey(cert).pem)
