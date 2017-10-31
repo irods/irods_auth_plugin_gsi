@@ -24,7 +24,7 @@ def get_build_prerequisites_all():
             'irods-externals-zeromq4-14.1.3-0']
 
 def get_build_prerequisites_apt():
-    return ['globus-proxy-utils', 'libglobus-gssapi-gsi-dev', 'make', 'libssl-dev', 'libkrb5-dev', 'gcc', 'libglobus-gss-assist-dev'] + get_build_prerequisites_all()
+    return ['globus-proxy-utils', 'libglobus-gssapi-gsi-dev', 'make', 'libssl-dev', 'libkrb5-dev', 'gcc'] + get_build_prerequisites_all()
 
 def get_build_prerequisites_yum():
     return ['globus-proxy-utils', 'globus-gssapi-gsi-devel', 'openssl-devel', 'krb5-devel'] + get_build_prerequisites_all()
