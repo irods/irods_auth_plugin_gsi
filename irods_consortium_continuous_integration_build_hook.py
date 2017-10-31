@@ -54,6 +54,9 @@ def install_build_prerequisites_apt():
         elif irods_python_ci_utilities.get_distribution_version_major() == '14':
             irods_python_ci_utilities.make_symbolic_link_as_root('/usr/lib/x86_64-linux-gnu/libglobus_callout.so.0', '/usr/lib/x86_64-linux-gnu/libglobus_callout.so')
             irods_python_ci_utilities.make_symbolic_link_as_root('/usr/lib/x86_64-linux-gnu/libglobus_gss_assist.so.3', '/usr/lib/x86_64-linux-gnu/libglobus_gss_assist.so')
+        elif irods_python_ci_utilities.get_distribution_version_major() == '16':
+            irods_python_ci_utilities.make_symbolic_link_as_root('/usr/lib/x86_64-linux-gnu/libglobus_callout.so.0', '/usr/lib/x86_64-linux-gnu/libglobus_callout.so')
+            irods_python_ci_utilities.make_symbolic_link_as_root('/usr/lib/x86_64-linux-gnu/libglobus_gss_assist.so.3', '/usr/lib/x86_64-linux-gnu/libglobus_gss_assist.so')
 
 def install_build_prerequisites_yum():
     irods_python_ci_utilities.install_os_packages(get_build_prerequisites())
