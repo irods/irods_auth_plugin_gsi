@@ -13,7 +13,7 @@ import irods_python_ci_utilities
 
 
 def get_test_prerequisites_apt():
-    return 'globus-toolkit-repo_latest_all.deb'
+    return 'globus-toolkit-repo_6.0.15_all.deb'
 
 def get_test_prerequisites_yum():
     return 'globus-toolkit-repo-latest.noarch.rpm'
