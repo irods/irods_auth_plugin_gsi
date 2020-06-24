@@ -8,6 +8,7 @@ import pwd
 import shutil
 import glob
 import time
+import subprocess
 
 import irods_python_ci_utilities
 
@@ -40,7 +41,7 @@ def do_globus_config():
     create_test_configuration_json(irodsbuild_proxy_copy, irodsbuild_distinguished_name)
 
 def create_irodsbuild_certificate():
-    irods_python_ci_utilities.subprocess_get_output(['grid-cert-request', '-nopw', '-force', '-cn', 'gsi_client_user'], check_rc=True)
+    irods_python_ci_utilities.subprocess_get_output(['sudo', 'su', '-', 'irodsbuild', '-c', 'grid-cert-request -nopw -force -cn gsi_client_user'], check_rc=True)
     irods_python_ci_utilities.subprocess_get_output(['sudo', 'chmod', 'u+w', '/home/irodsbuild/.globus/userkey.pem'], check_rc=True)
     private_key_password = 'gsitest'
     irods_python_ci_utilities.subprocess_get_output(['openssl', 'rsa', '-in', '/home/irodsbuild/.globus/userkey.pem', '-out', '/home/irodsbuild/.globus/userkey.pem', '-des3', '-passout', 'pass:{0}'.format(private_key_password)], check_rc=True)
@@ -91,9 +92,19 @@ def create_test_configuration_json(irodsbuild_proxy_copy, irodsbuild_distinguish
 def install_testing_dependencies():
     irods_python_ci_utilities.subprocess_get_output(['sudo', '-EH', 'pip', 'install', 'unittest-xml-reporting==1.14.0'])
     globus_toolkit_package_name = get_test_prerequisites()
-    irods_python_ci_utilities.subprocess_get_output(['wget', 'http://toolkit.globus.org/ftppub/gt6/installers/repo/{0}'.format(globus_toolkit_package_name)], check_rc=True)
+    if irods_python_ci_utilities.get_distribution() == 'Ubuntu':
+        package_repo = 'deb'
+    elif irods_python_ci_utilities.get_distribution() == 'Centos linux':
+        package_repo = 'rpm'
+
+    irods_python_ci_utilities.subprocess_get_output(['wget', 'http://downloads.globus.org/toolkit/gt6/stable/installers/repo/{0}/{1}'.format(package_repo ,globus_toolkit_package_name)], check_rc=True)
     irods_python_ci_utilities.install_os_packages_from_files([globus_toolkit_package_name])
-    irods_python_ci_utilities.install_os_packages(['globus-gsi'])
+    if irods_python_ci_utilities.get_distribution() == 'Ubuntu':
+        subprocess.check_call(['apt-get', 'update'])
+    if irods_python_ci_utilities.get_distribution() == 'Centos linux':
+        subprocess.check_call(['yum', 'install', '-y', 'epel-release'])
+        subprocess.check_call(['yum', 'update'])
+    irods_python_ci_utilities.install_os_packages(['globus-simple-ca', 'globus-gsi'])
 
 def main():
     parser = optparse.OptionParser()
