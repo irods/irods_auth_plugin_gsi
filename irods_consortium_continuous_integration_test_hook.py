@@ -41,6 +41,7 @@ def do_globus_config():
     create_test_configuration_json(irodsbuild_proxy_copy, irodsbuild_distinguished_name)
 
 def create_irodsbuild_certificate():
+    irods_python_ci_utilities.subprocess_get_output(['openssl', 'rand', '-out', '/home/irodsbuild/.rnd','-hex', '256'], check_rc=True)
     irods_python_ci_utilities.subprocess_get_output(['sudo', 'su', '-', 'irodsbuild', '-c', 'grid-cert-request -nopw -force -cn gsi_client_user'], check_rc=True)
     irods_python_ci_utilities.subprocess_get_output(['sudo', 'chmod', 'u+w', '/home/irodsbuild/.globus/userkey.pem'], check_rc=True)
     private_key_password = 'gsitest'
@@ -55,6 +56,7 @@ def create_irodsbuild_certificate():
     return private_key_password
 
 def create_irods_certificate():
+    irods_python_ci_utilities.subprocess_get_output(['openssl', 'rand', '-out', '/var/lib/irods/.rnd','-hex', '256'], check_rc=True)
     irods_python_ci_utilities.subprocess_get_output(['sudo', 'su', '-', 'irods', '-c', 'grid-cert-request -nopw -force -cn irods_service'], check_rc=True)
 
     temporary_certificate_location = '/tmp/gsicert'
@@ -101,6 +103,12 @@ def install_testing_dependencies():
     irods_python_ci_utilities.install_os_packages_from_files([globus_toolkit_package_name])
     if irods_python_ci_utilities.get_distribution() == 'Ubuntu':
         subprocess.check_call(['apt-get', 'update'])
+        if not os.path.exists('/var/log/messages'):
+            subprocess.check_call(['touch', '/var/log/messages'])
+        if not os.path.exists('/var/adm'):
+            os.makedirs('/var/adm')
+            subprocess.check_call(['touch', '/var/adm/wtmp'])
+
     if irods_python_ci_utilities.get_distribution() == 'Centos linux':
         subprocess.check_call(['yum', 'install', '-y', 'epel-release'])
         subprocess.check_call(['yum', 'update'])
