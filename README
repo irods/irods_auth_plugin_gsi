@@ -8,6 +8,12 @@ To build the GSI Auth Plugin, you will need to have:
 
  - globus-proxy-utils installed for your platform
 
+ - For Debian based platforms you would need to install libglobus-gssapi-gsi-dev, libssl-dev, libkrb5-dev
+
+ - For Redhat based platforms you would need to install globus-gssapi-gsi-devel, openssl-devel, krb5-devel
+
+ - Make symbolic links for libglobus_gss_assist.so.3 and libglobus_callout.so.0
+
 Note:
 
 Once installed, the `X509_USER_CERT` and `X509_USER_KEY` are necessary to be set for the service EVEN IF the default paths are used.
